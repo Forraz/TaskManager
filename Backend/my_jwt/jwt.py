@@ -4,6 +4,7 @@ from config import settings
 from hashlib import sha256
 import hmac
 from .redis_db import redis_cli
+from graphql.error import GraphQLError
 
 
 SECRET_KEY = settings.SECRET_KEY
@@ -39,45 +40,56 @@ def check_refresh_token(token):
 
 def check_access_token(token):
     try:
-        exp = eval(decode(token).split(".")[1])['exp']
+        token = decode(token)
+        header = str(eval(token.split(".")[0]))
+        payload = eval(token.split(".")[1])
+        exp = payload['exp']
+        signature = token.split(".")[2]
+
+        new_token = AccessToken()
+
+        new_token.header = encode(header)
+        new_token.payload = encode(str(payload))
+        new_token.generate_signature()
 
     except Exception:
-        return False
+        raise False
 
-    return exp > int(time.time())
+    return exp > int(time.time()) and str(new_token.signature) == str(encode(signature))
 
 
 class TokenMixin:
     typ = None
     alg = 'sha256'
 
+    def __init__(self):
+        self.header = None
+        self.payload = None
+        self.signature = None
+
     @staticmethod
     def get_exp():
         return int(time.time()) + JWT['ACCESS_TOKEN_LIFETIME']
 
-    @classmethod
-    def generate_header(cls) -> None:
-        cls.header = encode(str({'alg': cls.alg, 'typ': cls.typ}))
+    def generate_header(self) -> None:
+        self.header = encode(str({'alg': self.alg, 'typ': self.typ}))
 
-    @classmethod
-    def generate_payload(cls, user) -> None:
-        exp = cls.get_exp()
+    def generate_payload(self, user) -> None:
+        exp = self.get_exp()
         user_id = user.id
 
-        cls.payload = encode(str({'user_id': user_id, 'exp': exp}))
+        self.payload = encode(str({'user_id': user_id, 'exp': exp}))
 
-    @classmethod
-    def generate_signature(cls, user) -> None:
-        cls.generate_header()
-        cls.generate_payload(user)
+    def generate_signature(self) -> None:
+        self.signature = encode(str(hmac.new(SECRET_KEY.encode(), self.header + b"." + self.payload, sha256).digest().
+                                    hex()))
 
-        cls.signature = encode(str(hmac.new(SECRET_KEY.encode(), cls.header + b"." + cls.payload, sha256).digest().hex()))
+    def generate_token(self, user) -> str:
+        self.generate_header()
+        self.generate_payload(user)
+        self.generate_signature()
 
-    @classmethod
-    def generate_token(cls, user) -> str:
-        cls.generate_signature(user)
-
-        return ".".join([cls.header.decode(), cls.payload.decode(), cls.signature.decode()])
+        return ".".join([self.header.decode(), self.payload.decode(), self.signature.decode()])
 
 
 class AccessToken(TokenMixin):
@@ -87,8 +99,7 @@ class AccessToken(TokenMixin):
 class RefreshToken(TokenMixin):
     typ = 'refresh_token'
 
-    @classmethod
-    def generate_token(cls, user) -> str:
+    def generate_token(self, user) -> str:
         token = super().generate_token(user)
         if redis_cli.get(user.id):
             redis_cli.delete(user.id)

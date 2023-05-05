@@ -580,8 +580,8 @@ class LoginResolver(UserResolver):
         if user is None or not user.check_password(password):
             raise GraphQLError("Invalid username or password")
 
-        access_token = AccessToken.generate_token(user)
-        refresh_token = RefreshToken.generate_token(user)
+        access_token = AccessToken().generate_token(user)
+        refresh_token = RefreshToken().generate_token(user)
 
         return TokensType(access_token, refresh_token)
 
@@ -597,8 +597,8 @@ class RefreshTokenResolver:
 
         user = User.objects.get(id=user_id)
 
-        access_token = AccessToken.generate_token(user)
-        refresh_token = RefreshToken.generate_token(user)
+        access_token = AccessToken().generate_token(user)
+        refresh_token = RefreshToken().generate_token(user)
 
         return TokensType(access_token, refresh_token)
 
