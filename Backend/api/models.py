@@ -1,5 +1,8 @@
+import datetime
+
 from django.db import models
 from django.contrib.auth.models import User
+import django
 
 
 class ProjectsModel(models.Model):
@@ -25,6 +28,7 @@ class RoleModel(models.Model):
     _delete = models.BooleanField()
     role_management = models.BooleanField()
     user_management = models.BooleanField()
+    is_admin = models.BooleanField()
 
 
 class RoleUserProjectModel(models.Model):
@@ -49,7 +53,7 @@ class TasksModel(models.Model):
     title = models.CharField(max_length=150)
     description = models.TextField(blank=True, null=True)
     is_finished = models.BooleanField(default=False)
-    date = models.DateField(default=None, null=True)
+    date_time = models.DateTimeField(default=None, null=True)
     users = models.ManyToManyField(User)
     subtasks = models.ManyToManyField('SubTasksModel', related_name='task')
     tags = models.ManyToManyField('TagsModel', related_name='task')
@@ -70,9 +74,15 @@ class SubTasksModel(models.Model):
     is_finished = models.BooleanField(default=False)
 
 
-class TokensModel(models.Model):
+class NotificationsModel(models.Model):
+    """Модель для уведомлений"""
 
-    refresh_token = models.TextField()
+    title = models.TextField()
+    description = models.TextField()
+    date_time = models.DateTimeField(default=django.utils.timezone.now)
+    _from = models.CharField(max_length=100)
+    is_viewed = models.BooleanField(default=False)
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
 
 
 

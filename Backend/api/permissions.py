@@ -28,13 +28,16 @@ class HasPermissionMixin:
         cls.user_has_permission(cls.user, cls.project)
 
 
-class ProjectPermission(HasPermissionMixin):
-    model = ProjectsModel
+class GetProjectById:
 
     @classmethod
     def set_objects(cls, info):
         cls.project = cls.model.objects.get(id=info.variable_values['id'])
         cls.user = info.context.request.user
+
+
+class ProjectPermission(HasPermissionMixin, GetProjectById):
+    model = ProjectsModel
 
 
 class FolderPermission(HasPermissionMixin):
@@ -70,16 +73,11 @@ class SubTaskPermission(HasPermissionMixin):
         cls.user = info.context.request.user
 
 
-class TagPermission(HasPermissionMixin):
+class TagPermission(HasPermissionMixin, GetProjectById):
     model = TagsModel
 
-    @classmethod
-    def set_objects(cls, info):
-        cls.project = ProjectsModel.objects.get(id=info.variable_values['id'])
-        cls.user = info.context.request.user
 
-
-class RoleUserProjectPermission(HasPermissionMixin):
+class RoleUserProjectPermission(HasPermissionMixin, GetProjectById):
     model = RoleUserProjectModel
 
     @classmethod
@@ -122,7 +120,7 @@ class AddObjectPermissionMixin:
         except ObjectDoesNotExist:
             raise GraphQLError('Access is denied or object is not exist.')
 
-        if not role.create:
+        if not (role._create or role.is_admin):
             raise GraphQLError('Access is denied.')
 
 
@@ -137,7 +135,7 @@ class SetObjectPermissionMixin:
         except ObjectDoesNotExist:
             raise GraphQLError('Access denied or object does not exist.')
 
-        if not role.update:
+        if not role._update:
             raise GraphQLError('Access denied.')
 
 
@@ -152,7 +150,7 @@ class RemoveObjectPermissionMixin:
         except ObjectDoesNotExist:
             raise GraphQLError('Access is denied or object is not exist.')
 
-        if not role.delete:
+        if not role._delete:
             raise GraphQLError('Access is denied.')
 
 
@@ -202,12 +200,8 @@ class GetFolderPermission(GetObjectPermissionMixin, FolderPermission):
     pass
 
 
-class AddFolderPermission(AddObjectPermissionMixin, FolderPermission):
-
-    @classmethod
-    def set_objects(cls, info):
-        cls.project = ProjectsModel.objects.get(id=info.variable_values['id'])
-        cls.user = info.context.request.user
+class AddFolderPermission(AddObjectPermissionMixin, FolderPermission, GetProjectById):
+    pass
 
 
 class SetFolderPermission(SetObjectPermissionMixin, FolderPermission):
@@ -293,12 +287,8 @@ class GetRolePermission(GetObjectPermissionMixin, RolePermission):
     pass
 
 
-class AddRolePermission(RoleManagementPermissionMixin, RolePermission):
-
-    @classmethod
-    def set_objects(cls, info):
-        cls.project = ProjectsModel.objects.get(id=info.variable_values['id'])
-        cls.user = info.context.request.user
+class AddRolePermission(RoleManagementPermissionMixin, RolePermission, GetProjectById):
+    pass
 
 
 class SetRolePermission(RoleManagementPermissionMixin, RolePermission):
@@ -307,7 +297,3 @@ class SetRolePermission(RoleManagementPermissionMixin, RolePermission):
 
 class RemoveRolePermission(RoleManagementPermissionMixin, RolePermission):
     pass
-
-
-
-

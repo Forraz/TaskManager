@@ -7,6 +7,9 @@ from .models import ProjectsModel, FoldersModel, TasksModel, SubTasksModel
 from django.contrib.auth.models import User
 
 
+
+
+
 @strawberry.django.type(TagsModel)
 class TagType:
     id: int
@@ -18,6 +21,17 @@ class TagType:
 class UserType:
     id: int
     username: str
+
+
+@strawberry.django.type(NotificationsModel)
+class NotificationType:
+    id: int
+    title: str
+    description: str
+    is_viewed: bool
+    date_time: datetime.datetime
+    _from: str
+    user: UserType
 
 
 @strawberry.django.type(SubTasksModel)
@@ -34,7 +48,7 @@ class TaskType:
     title: str
     description: str
     is_finished: bool
-    date: datetime.date
+    date_time: datetime.datetime
     users: List[UserType]
     subtasks: List[SubTaskType]
     tags: List[TagType]
@@ -89,6 +103,7 @@ class Query:
     get_user: RoleUserProjectType = strawberry.field(resolver=GetUserResolver.resolver)
     get_tag: TagType = strawberry.field(resolver=GetTagResolver.resolver)
     get_role: RoleType = strawberry.field(resolver=GetRoleResolver.resolver)
+    get_users_notifications: List[NotificationType] = strawberry.field(resolver=GetUserNotifications.resolver)
 
 
 @strawberry.type
@@ -104,6 +119,7 @@ class Mutation:
     remove_folder: bool = strawberry.mutation(resolver=RemoveFolderResolver.resolver)
     add_task: TaskType = strawberry.mutation(resolver=AddTaskResolver.resolver)
     set_task: TaskType = strawberry.mutation(resolver=SetTaskResolver.resolver)
+    add_user_to_task: TaskType = strawberry.mutation(resolver=AddUserToTaskResolver.resolver)
     remove_task: bool = strawberry.mutation(resolver=RemoveTaskResolver.resolver)
     add_subtask: SubTaskType = strawberry.mutation(resolver=AddSubTaskResolver.resolver)
     set_subtask: SubTaskType = strawberry.mutation(resolver=SetSubTaskResolver.resolver)

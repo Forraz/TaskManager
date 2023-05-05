@@ -39,6 +39,9 @@ REDIS = {
     'port': 6379,
     'db': 0
 }
+
+SCHEDULER_API_ENABLED = True
+
 INSTALLED_APPS = [
     'django.contrib.admin',
     'django.contrib.auth',

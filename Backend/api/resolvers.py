@@ -1,11 +1,13 @@
 import datetime
-from typing import Optional
+from typing import Optional, List
+
 from django.db import transaction
 from .permissions import *
-from .models import ProjectsModel, FoldersModel, TasksModel, SubTasksModel, RoleModel
+from .models import ProjectsModel, FoldersModel, TasksModel, SubTasksModel, RoleModel, NotificationsModel
 from django.contrib.auth.models import User
 from my_jwt.jwt import AccessToken, RefreshToken, decode, encode, check_refresh_token
 import strawberry
+from .scheduler import schedule_task, scheduler
 
 
 def get_info(info, id):
@@ -66,6 +68,10 @@ class TagResolver(CheckAccessMixin):
 
 class UserResolver(CheckAccessMixin):
     model = User
+
+
+class NotificationResolver(CheckAccessMixin):
+    model = NotificationsModel
 
 
 class GetResolver:
@@ -213,13 +219,19 @@ class AddTaskResolver(TaskResolver):
     @classmethod
     @transaction.atomic()
     def resolver(cls, info, folder_id: int, title: str, description: Optional[str] = None,
-                 date: Optional[datetime.date] = None):
+                 date_time: Optional[datetime.datetime] = None):
         info = get_info(info, folder_id)
         cls.check_access(info)
 
-        task = cls.model.objects.create(title=title, description=description, date=date)
+        task = cls.model.objects.create(title=title, description=description, date_time=date_time)
 
         cls.parent.model.objects.get(id=folder_id).tasks.add(task)
+
+        if date_time is not None:
+            schedule_task(task)
+
+            if not scheduler.running:
+                scheduler.start()
 
         return task
 
@@ -230,7 +242,7 @@ class SetTaskResolver(TaskResolver):
     @classmethod
     def resolver(cls, info, id: int, title: Optional[str] = None,
                  description: Optional[str] = None, is_finished: Optional[bool] = None,
-                 date: Optional[datetime.date] = None):
+                 date_time: Optional[datetime.datetime] = None):
         info = get_info(info, id)
         cls.check_access(info)
 
@@ -245,10 +257,25 @@ class SetTaskResolver(TaskResolver):
         if is_finished is not None:
             task.is_finished = is_finished
 
-        if date:
-            task.date = date
+        if date_time:
+            task.date_time = date_time
 
         task.save()
+
+        return task
+
+
+class AddUserToTaskResolver(TaskResolver):
+    permission_classes = [IsAuthenticated, SetTaskPermission]
+
+    @classmethod
+    def resolver(cls, info, id: int, user: int):
+        info = get_info(info, id)
+        cls.check_access(info)
+
+        task = TasksModel.objects.get(id=id)
+
+        task.users.add(user)
 
         return task
 
@@ -574,6 +601,19 @@ class RefreshTokenResolver:
         refresh_token = RefreshToken.generate_token(user)
 
         return TokensType(access_token, refresh_token)
+
+
+class GetUserNotifications(NotificationResolver):
+    permission_classes = [IsAuthenticated]
+
+    @classmethod
+    def resolver(cls, info):
+        cls.check_access(info)
+
+        user = info.context.request.user
+
+        return list(cls.model.objects.filter(user=user.id))
+
 
 
 
