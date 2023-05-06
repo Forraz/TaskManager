@@ -1,5 +1,4 @@
 from django.contrib.auth.middleware import get_user
-from django.contrib.auth import authenticate
 from my_jwt.jwt import check_access_token
 from graphql.error import GraphQLError
 from my_jwt.jwt import decode

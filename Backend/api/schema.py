@@ -7,9 +7,6 @@ from .models import ProjectsModel, FoldersModel, TasksModel, SubTasksModel
 from django.contrib.auth.models import User
 
 
-
-
-
 @strawberry.django.type(TagsModel)
 class TagType:
     id: int

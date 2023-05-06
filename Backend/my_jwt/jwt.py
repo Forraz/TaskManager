@@ -4,7 +4,6 @@ from config import settings
 from hashlib import sha256
 import hmac
 from .redis_db import redis_cli
-from graphql.error import GraphQLError
 
 
 SECRET_KEY = settings.SECRET_KEY

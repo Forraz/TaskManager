@@ -1,4 +1,4 @@
-from .models import TasksModel, NotificationsModel
+from .models import NotificationsModel
 
 
 def send_notification(task):
