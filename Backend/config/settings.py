@@ -37,7 +37,8 @@ JWT = {
 REDIS = {
     'host': 'localhost',
     'port': 6379,
-    'db': 0
+    'access_tokens_db': 0,
+    'refresh_tokens_db': 1
 }
 
 SCHEDULER_API_ENABLED = True

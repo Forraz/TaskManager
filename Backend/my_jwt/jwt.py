@@ -3,7 +3,7 @@ from base64 import b64encode, b64decode
 from config import settings
 from hashlib import sha256
 import hmac
-from .redis_db import redis_cli
+from .redis_db import redis_refresh_tokens, redis_access_tokens
 
 
 SECRET_KEY = settings.SECRET_KEY
@@ -34,31 +34,38 @@ def check_refresh_token(token):
     except Exception:
         return False
 
-    return redis_cli.get(user_id).decode() == token
+    token = redis_refresh_tokens.get(user_id)
+
+    if token:
+        return token.decode() == token
+
+    return False
 
 
 def check_access_token(token):
     try:
-        token = decode(token)
-        header = str(eval(token.split(".")[0]))
-        payload = eval(token.split(".")[1])
-        exp = payload['exp']
-        signature = token.split(".")[2]
+        user_id = eval(decode(token).split(".")[1])['user_id']
 
-        new_token = AccessToken()
+    except Exception as e:
+        return False
 
-        new_token.header = encode(header)
-        new_token.payload = encode(str(payload))
-        new_token.generate_signature()
+    db_token = redis_access_tokens.get(user_id)
 
-    except Exception:
-        raise False
+    if token:
+        return db_token.decode() == token
 
-    return exp > int(time.time()) and str(new_token.signature) == str(encode(signature))
+    return False
+
+
+def delete_tokens(request):
+    user_id = request.user.id
+    redis_refresh_tokens.delete(user_id)
+    redis_access_tokens.delete(user_id)
 
 
 class TokenMixin:
     typ = None
+    db = None
     alg = 'sha256'
 
     def __init__(self):
@@ -88,24 +95,25 @@ class TokenMixin:
         self.generate_payload(user)
         self.generate_signature()
 
-        return ".".join([self.header.decode(), self.payload.decode(), self.signature.decode()])
+        token = ".".join([self.header.decode(), self.payload.decode(), self.signature.decode()])
+
+        if self.db.get(user.id):
+            self.db.delete(user.id)
+
+        self.db.set(user.id, token, ex=JWT[f'{self.typ.upper()}_LIFETIME'])
+
+        return token
 
 
 class AccessToken(TokenMixin):
     typ = 'access_token'
+    db = redis_access_tokens
 
 
 class RefreshToken(TokenMixin):
     typ = 'refresh_token'
+    db = redis_refresh_tokens
 
-    def generate_token(self, user) -> str:
-        token = super().generate_token(user)
-        if redis_cli.get(user.id):
-            redis_cli.delete(user.id)
-
-        redis_cli.set(user.id, token, ex=JWT['REFRESH_TOKEN_LIFETIME'])
-
-        return token
 
 
 

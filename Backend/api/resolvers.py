@@ -5,7 +5,8 @@ from django.db import transaction
 from .permissions import *
 from .models import ProjectsModel, FoldersModel, TasksModel, SubTasksModel, RoleModel, NotificationsModel
 from django.contrib.auth.models import User
-from my_jwt.jwt import AccessToken, RefreshToken, decode, encode, check_refresh_token
+from my_jwt.jwt import AccessToken, RefreshToken, decode, check_refresh_token, check_access_token,  delete_tokens
+
 import strawberry
 from .scheduler import schedule_task, scheduler
 
@@ -614,6 +615,15 @@ class GetUserNotifications(NotificationResolver):
 
         return list(cls.model.objects.filter(user=user.id))
 
+
+class LogoutResolver(UserResolver):
+    permission_classes = [IsAuthenticated]
+
+    @classmethod
+    def resolver(cls, info):
+        cls.check_access(info)
+
+        delete_tokens(info.context.request)
 
 
 
