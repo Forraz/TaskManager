@@ -1,12 +1,9 @@
-Graphql API(пока что только API) для таск менеджера.
+Simple Graphql API for a Task Manager.
 
-**Использованные технологии:**
 
 <img src="https://img.shields.io/badge/WEB_Framework-Django-blueviolet?style=for-the-badge"> <img src="https://img.shields.io/badge/API-GraphQL-blueviolet?style=for-the-badge">
 <img src="https://img.shields.io/badge/DB-SQLite-blueviolet?style=for-the-badge">
 <img src="https://img.shields.io/badge/DB-Redis-blueviolet?style=for-the-badge">
-
-**Инструкуция по установке и запуску:**
     
     git clone https://github.com/Forraz/TaskManager.git
     
